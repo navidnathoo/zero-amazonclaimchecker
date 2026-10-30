@@ -6,9 +6,9 @@ import sys
 from dotenv import load_dotenv
 from openai import OpenAI
 
-DEFAULT_MODEL = "anthropic/claude-sonnet-5.5"
-
 load_dotenv()
+
+DEFAULT_MODEL = os.getenv("OPENROUTER_MODEL", "anthropic/claude-sonnet-5.5")
 
 
 def get_client() -> OpenAI:
