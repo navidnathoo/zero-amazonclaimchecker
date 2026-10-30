@@ -69,11 +69,12 @@ def check_claim(row: dict) -> dict:
     )
     system = (
         RULE_FILE.read_text(encoding="utf-8")
-        + "\n\nFor this run, reply with JSON only instead of the answer format above, no other text:\n"
-        '{"page_id": "<id of the best page, or null>", '
+        + "\n\nYou are both the organizer and the checker. Reply with JSON only, no other text. "
+        "If you are unsure whether the quote backs every fact, set backs_every_fact to false.\n"
+        '{"page_id": "<id of the matching page, or null for no match>", '
         '"quote": "<sentence(s) copied exactly from that page, or null>", '
         '"backs_every_fact": true or false, '
-        '"reason": "<one line>"}'
+        '"reason": "<one line saying which fact does not match, or why it all matches>"}'
     )
     client = wrap_openai(get_client())
     response = client.chat.completions.create(
@@ -95,14 +96,14 @@ def check_claim(row: dict) -> dict:
     check3 = bool(check2 and answer.get("backs_every_fact") is True)
 
     if not check1:
-        verdict = "REJECTED: no source page on aws.amazon.com in the snapshot supports this claim."
+        verdict = 'rejected. Reason: "Check 1 failed: no source page on aws.amazon.com in the snapshot matches this claim."'
     elif not check2:
-        verdict = "REJECTED: the quote is not copied exactly from the source page."
+        verdict = 'rejected. Reason: "Check 2 failed: the quote is not copied exactly from the source page."'
     elif not check3:
-        reason = re.sub(r"^(REJECTED:\s*)?(Check 3 failed\.\s*)?", "", answer.get("reason") or "")
-        verdict = f"REJECTED: the quote does not back every fact. {reason}".strip()
+        reason = re.sub(r"^(REJECTED:\s*)?(Check 3 failed[.:]\s*)?", "", answer.get("reason") or "").strip()
+        verdict = f'rejected. Reason: "Check 3 failed: {reason}"'
     else:
-        verdict = "CONFIRMED"
+        verdict = "confirmed"
 
     return {
         "url": page["url"] if page else None,
@@ -122,8 +123,8 @@ if __name__ == "__main__":
     result = check_claim(row, langsmith_extra={"metadata": {"candidate_id": candidate_id}})
     c1, c2, c3 = result["checks"]
     print(f"{candidate_id}: {row['claim_text']}\n")
-    print(f"Check 1 (source page on aws.amazon.com): {yes_no(c1)}, {result['url'] or 'none'}")
-    print(f'Check 2 (exact quote from that page): {yes_no(c2)}, "{result["quote"]}"' if result["quote"]
-          else f"Check 2 (exact quote from that page): {yes_no(c2)}, none")
-    print(f"Check 3 (quote backs every fact): {yes_no(c3)}")
+    print(f"1. Source page on aws.amazon.com: {yes_no(c1)}, {result['url'] or 'none'}")
+    print(f'2. Exact quote from that page: {yes_no(c2)}, "{result["quote"]}"' if result["quote"]
+          else f"2. Exact quote from that page: {yes_no(c2)}, none")
+    print(f"3. Quote backs every fact: {yes_no(c3)}")
     print(f"Verdict: {result['verdict']}")
