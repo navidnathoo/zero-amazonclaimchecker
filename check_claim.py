@@ -10,6 +10,7 @@ from langsmith.wrappers import wrap_openai
 from openrouter_client import DEFAULT_MODEL, get_client
 
 DATA_FILE = Path(__file__).parent / "data" / "aws_reinvent_candidate_items.csv"
+RULE_FILE = Path(__file__).parent / "confirm_rule.md"
 QUESTION = "Is this a real AWS launch? Answer yes or no, and name the page that proves it."
 
 
@@ -24,10 +25,14 @@ def load_row(candidate_id: str) -> dict:
 @traceable(name="check_claim")
 def check_claim(row: dict) -> str:
     client = wrap_openai(get_client())
+    rule = RULE_FILE.read_text(encoding="utf-8")
     prompt = f"Claim: {row['claim_text']}\n\n{QUESTION}"
     response = client.chat.completions.create(
         model=DEFAULT_MODEL,
-        messages=[{"role": "user", "content": prompt}],
+        messages=[
+            {"role": "system", "content": rule},
+            {"role": "user", "content": prompt},
+        ],
         max_tokens=512,
     )
     return response.choices[0].message.content
