@@ -69,7 +69,7 @@ def check_claim(row: dict) -> dict:
     )
     system = (
         RULE_FILE.read_text(encoding="utf-8")
-        + "\n\nYou are both the organizer and the checker. Reply with JSON only, no other text. "
+        + "\n\nYou are both the researcher and the fact-checker. Reply with JSON only, no other text. "
         "If you are unsure whether the quote backs every fact, set backs_every_fact to false.\n"
         '{"page_id": "<id of the matching page, or null for no match>", '
         '"quote": "<sentence(s) copied exactly from that page, or null>", '
