@@ -17,3 +17,5 @@ Checks whether a claimed AWS launch is real. `check_claim.py` reads a row from `
 **LangSmith trace:** https://smith.langchain.com/public/21f13ce4-dd97-4b7f-b675-6075f9035c7a/r/3de151e7-b03f-4690-b148-ab4827e44091?start_time=2026-10-30T11%3A59%3A51.230376Z
 
 The model didn't name an official AWS page that proves the claim, and the claim's only source is the Hacker News (Y Combinator) front page.
+
+The Openrouter Model we're using is: anthropic/claude-haiku-5.5
