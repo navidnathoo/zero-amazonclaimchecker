@@ -20,6 +20,7 @@ from langsmith.wrappers import wrap_openai
 
 from check_claim import DATA_FILE, ROOT, RULE_FILE, SNAPSHOT_FILE, candidate_pages, yes_no
 from openrouter_client import DEFAULT_MODEL, get_client
+from tests.test_safety import SUMMARY_FILE, check_confirmed, check_rejected
 
 RESULTS_FILE = ROOT / "results.md"
 
@@ -187,13 +188,73 @@ def run(row: dict) -> ClaimState:
     return {**result, "run_id": run_id}
 
 
+def add_trace_links(results: list) -> None:
+    """Looks up each run's LangSmith URL. Call after wait_for_all_tracers()."""
+    ls = Client()
+    for r in results:
+        try:
+            r["trace_link"] = ls.get_run_url(run=ls.read_run(r["run_id"]))
+        except Exception:
+            r["trace_link"] = None
+
+
+def full_reason(r: dict) -> str:
+    if all(r["checks"]):
+        return "All three checks passed."
+    return f'Check {r["checks"].index(False) + 1} failed: {r["reason"]}'
+
+
+def lead_summary(results: list) -> dict:
+    """Final lead step: gathers every result into a confirmed list and a rejected list."""
+    confirmed, rejected = [], []
+    for r in results:
+        if all(r["checks"]):
+            confirmed.append({
+                "candidate_id": r["row"]["candidate_id"],
+                "source_url": r["url"],
+                "quote": r["quote"],
+                "trace_link": r["trace_link"],
+            })
+        else:
+            rejected.append({
+                "candidate_id": r["row"]["candidate_id"],
+                "reason": full_reason(r),
+                "trace_link": r["trace_link"],
+            })
+    return {"confirmed": confirmed, "rejected": rejected}
+
+
+def safety_checks(summary: dict) -> None:
+    """Runs tests/test_safety.py's checks on both lists. Stops the pipeline if either fails."""
+    try:
+        check_confirmed(summary["confirmed"])
+        check_rejected(summary["rejected"])
+    except AssertionError as error:
+        sys.exit(f"Safety check failed, so no briefing was built: {error}")
+
+
+def print_summary(summary: dict) -> None:
+    def short(text: str, limit: int = 100) -> str:
+        text = " / ".join(" ".join(line.split()) for line in (text or "").splitlines() if line.strip())
+        return text if len(text) <= limit else text[: limit - 3] + "..."
+
+    print(f"Confirmed ({len(summary['confirmed'])}):")
+    for item in summary["confirmed"]:
+        print(f"  {item['candidate_id']}  {item['source_url']}")
+        print(f"         \"{short(item['quote'])}\"")
+        print(f"         trace: {item['trace_link'] or 'not recorded'}")
+    print(f"Rejected ({len(summary['rejected'])}):")
+    for item in summary["rejected"]:
+        print(f"  {item['candidate_id']}  {short(item['reason'])}")
+        print(f"         trace: {item['trace_link'] or 'not recorded'}")
+
+
 def cell(text: str) -> str:
     return (text or "").replace("|", "\\|").replace("\n", " ")
 
 
 def write_results(results: list) -> None:
     """results.md: one row per candidate, with a link to its LangSmith trace."""
-    ls = Client()
     lines = [
         "# Results",
         "",
@@ -210,15 +271,9 @@ def write_results(results: list) -> None:
             source = f'{r["url"]}<br>"{r.get("quote") or ""}"'
         else:
             source = "no match"
-        reason = r["reason"] if verdict == "rejected" else "All three checks passed."
-        if verdict == "rejected":
-            reason = f'Check {r["checks"].index(False) + 1} failed: {reason}'
-        try:
-            trace = f"[trace]({ls.get_run_url(run=ls.read_run(r['run_id']))})"
-        except Exception:
-            trace = "not recorded"
+        trace = f"[trace]({r['trace_link']})" if r.get("trace_link") else "not recorded"
         lines.append(
-            f"| {row['candidate_id']} | {cell(row['claim_text'])} | {verdict} | {cell(source)} | {cell(reason)} | {trace} |"
+            f"| {row['candidate_id']} | {cell(row['claim_text'])} | {verdict} | {cell(source)} | {cell(full_reason(r))} | {trace} |"
         )
 
     lines += ["", "## Every fact, checked against the quote", ""]
@@ -238,9 +293,9 @@ def write_results(results: list) -> None:
     RESULTS_FILE.write_text("\n".join(lines), encoding="utf-8")
 
 
-if __name__ == "__main__":
+def main(wanted: set) -> dict:
+    """Runs each candidate through the graph, then the final lead step. Returns both lists."""
     rows = load_rows()
-    wanted = set(sys.argv[1:])
     if wanted:
         rows = [r for r in rows if r["candidate_id"] in wanted]
     results = []
@@ -254,6 +309,16 @@ if __name__ == "__main__":
         print(f"  3. Sentences back every fact: {yes_no(c3)}")
         print(f"  Verdict: {result['verdict']}\n")
     wait_for_all_tracers()
+    add_trace_links(results)
     if not wanted:
         write_results(results)
-        print(f"Wrote {RESULTS_FILE.name}")
+        print(f"Wrote {RESULTS_FILE.name}\n")
+    summary = lead_summary(results)
+    SUMMARY_FILE.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+    safety_checks(summary)
+    print_summary(summary)
+    return summary
+
+
+if __name__ == "__main__":
+    main(set(sys.argv[1:]))
