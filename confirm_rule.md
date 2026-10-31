@@ -16,7 +16,7 @@ Any no rejects the claim, with a one-line reason saying which check failed. If t
 |---|---|
 | Lead agent | Takes the claim, sends it to the researcher and fact-checker, and writes the final verdict. |
 | Researcher | Finds the claim's page on aws.amazon.com in the snapshot and copies the exact sentences that bear on it, or reports no match. |
-| Fact-checker | Answers the three checks yes or no from the claim and the copied sentences, with a one-line reason for any no. |
+| Fact-checker | Answers the three checks yes or no, listing every fact in the claim with the exact words that back it, and gives a one-line reason for any no. |
 
 ## Worked example 1: C-01 (confirmed)
 

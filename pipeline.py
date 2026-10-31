@@ -35,6 +35,7 @@ class ClaimState(TypedDict, total=False):
     url: Optional[str]
     quote: Optional[str]
     checks: List[bool]
+    facts: List[dict]
     reason: str
     verdict: str
 
@@ -84,16 +85,25 @@ def researcher(state: ClaimState) -> ClaimState:
     answer = ask_json(
         "researcher",
         f"Claim: {row['claim_text']}\n\nOfficial AWS pages from the snapshot:\n\n{sources}\n\n"
-        "Pick the page that best covers this claim and copy the sentences that bear on it, word for word. "
-        "If no page covers the claim, use null for both.\n"
-        '{"page_id": "<page id or null>", "quote": "<exact sentences or null>"}',
+        "Pick the page that best covers this claim and copy every body sentence that bears on it, word for word. "
+        "(The page title is added for you.) If no page covers the claim, use null and an empty list.\n"
+        '{"page_id": "<page id or null>", "sentences": ["<exact title or sentence>", "..."]}',
     )
     page = PAGES_BY_ID.get(answer.get("page_id") or "")
+    sentences = [s.strip() for s in answer.get("sentences") or [] if isinstance(s, str) and s.strip()]
+    # The title is part of the page and can state facts the body leaves out, so it always goes first.
+    if page and sentences and page["title"] not in sentences:
+        sentences.insert(0, page["title"])
     return {
         "page_id": page["page_id"] if page else None,
         "url": page["url"] if page else None,
-        "quote": (answer.get("quote") or "").strip() or None,
+        "quote": "\n".join(sentences) or None,
     }
+
+
+def on_page(piece: str, page: dict) -> bool:
+    """True if this piece is copied exactly from the page's body or title."""
+    return piece in page["body_text"] or piece.rstrip(".") in page["title"]
 
 
 def fact_checker(state: ClaimState) -> ClaimState:
@@ -104,20 +114,46 @@ def fact_checker(state: ClaimState) -> ClaimState:
     if not check1:
         return {"checks": [False, False, False],
                 "reason": "no source page on aws.amazon.com in the snapshot matches this claim."}
-    sentences = [s for s in re.split(r"(?<=[.!?])\s+", quote) if s]
-    check2 = bool(sentences) and all(s in page["body_text"] for s in sentences)
+    pieces = [s for line in quote.splitlines() for s in re.split(r"(?<=[.!?])\s+", line.strip()) if s]
+    check2 = bool(pieces) and all(on_page(s, page) for s in pieces)
     if not check2:
         return {"checks": [True, False, False],
                 "reason": "the sentences are not copied exactly from the source page."}
     answer = ask_json(
         "fact-checker",
         f"Claim: {state['row']['claim_text']}\n\nSource: {page['url']}\nSentences copied from it:\n{quote}\n\n"
-        "Do these sentences back every fact in the claim? If unsure, answer false.\n"
-        '{"backs_every_fact": true or false, "reason": "<one line saying which fact does not match, or that all match>"}',
+        "Split the claim into every separate fact it states (service, what it does, launch stage, "
+        "Regions, scale, dates and so on). For each fact, say whether the copied sentences state it. "
+        "Use only the copied sentences, not outside knowledge. If unsure, it is not supported. "
+        "For a supported fact, give the words from the copied sentences that back it, copied exactly, "
+        'and say whether they state the fact in the same words ("exact") or in different words that mean '
+        'the same thing ("same meaning"). '
+        "For an unsupported fact, say in a few words what the sentences say instead.\n"
+        '{"facts": [{"fact": "<fact from the claim>", "supported": true or false, '
+        '"evidence": "<exact words from the copied sentences, or null>", '
+        '"match": "exact" or "same meaning" or null, "note": "<short note if unsupported, or null>"}]}',
     )
-    check3 = answer.get("backs_every_fact") is True
-    reason = re.sub(r"^(No[.:,]?\s*)", "", answer.get("reason") or "").strip()
-    return {"checks": [True, True, check3], "reason": reason}
+    facts = []
+    for f in answer.get("facts") or []:
+        evidence = (f.get("evidence") or "").strip()
+        # A fact only counts as supported if its evidence really is in the copied sentences.
+        supported = f.get("supported") is True and bool(evidence) and evidence in quote
+        facts.append({
+            "fact": (f.get("fact") or "").rstrip("."),
+            "supported": supported,
+            "evidence": evidence if supported else None,
+            "match": (f.get("match") or "same meaning") if supported else None,
+            "note": None if supported else (f.get("note") or "not stated in the copied sentences"),
+        })
+    unsupported = [f for f in facts if not f["supported"]]
+    check3 = bool(facts) and not unsupported
+    if not facts:
+        reason = "the fact-checker did not list the claim's facts."
+    elif unsupported:
+        reason = "; ".join(f"'{f['fact']}' is not backed ({f['note'].rstrip('.')})" for f in unsupported) + "."
+    else:
+        reason = "every fact is backed by the copied sentences."
+    return {"checks": [True, True, check3], "facts": facts, "reason": reason}
 
 
 builder = StateGraph(ClaimState)
@@ -184,7 +220,22 @@ def write_results(results: list) -> None:
         lines.append(
             f"| {row['candidate_id']} | {cell(row['claim_text'])} | {verdict} | {cell(source)} | {cell(reason)} | {trace} |"
         )
-    RESULTS_FILE.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    lines += ["", "## Every fact, checked against the quote", ""]
+    for r in results:
+        lines += [f"### {r['row']['candidate_id']}", ""]
+        if not r.get("facts"):
+            lines += ["No facts checked: the claim failed before check 3.", ""]
+            continue
+        lines += ["| Fact in the claim | Backed? | Words from the quote, or what it says instead |", "|---|---|---|"]
+        for f in r["facts"]:
+            if f["supported"]:
+                backed = "yes" if f["match"] == "exact" else "yes (same meaning)"
+                lines.append(f'| {cell(f["fact"])} | {backed} | "{cell(f["evidence"])}" |')
+            else:
+                lines.append(f'| {cell(f["fact"])} | **no** | {cell(f["note"])} |')
+        lines.append("")
+    RESULTS_FILE.write_text("\n".join(lines), encoding="utf-8")
 
 
 if __name__ == "__main__":
