@@ -15,6 +15,7 @@ from langsmith import traceable
 from langsmith.wrappers import wrap_openai
 
 from openrouter_client import DEFAULT_MODEL, get_client
+from tests.test_safety import is_official_aws_url
 
 ROOT = Path(__file__).parent
 DATA_FILE = ROOT / "data" / "aws_reinvent_candidate_items.csv"
@@ -91,7 +92,7 @@ def check_claim(row: dict) -> dict:
 
     page = by_id.get(answer.get("page_id") or "")
     quote = (answer.get("quote") or "").strip()
-    check1 = bool(page and page["url"].startswith("https://aws.amazon.com/"))
+    check1 = bool(page and is_official_aws_url(page["url"]))
     check2 = bool(check1 and quote and quote in page["body_text"])
     check3 = bool(check2 and answer.get("backs_every_fact") is True)
 

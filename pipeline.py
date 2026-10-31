@@ -2,8 +2,8 @@
 
 Each candidate is one graph run, recorded in LangSmith as "claim C-0X".
 
-    .venv/bin/python pipeline.py          # every candidate in the CSV, then writes results.md
-    .venv/bin/python pipeline.py C-05     # one or more candidates (results.md left as is)
+    .venv/bin/python pipeline.py          # every candidate; writes summary.json and results.md if the safety checks pass
+    .venv/bin/python pipeline.py C-05     # one or more candidates; prints only, writes no files
 """
 
 import csv
@@ -11,6 +11,7 @@ import json
 import re
 import sys
 import uuid
+from datetime import datetime, timezone
 from typing import List, Optional, TypedDict
 
 from langchain_core.tracers.langchain import wait_for_all_tracers
@@ -20,9 +21,10 @@ from langsmith.wrappers import wrap_openai
 
 from check_claim import DATA_FILE, ROOT, RULE_FILE, SNAPSHOT_FILE, candidate_pages, yes_no
 from openrouter_client import DEFAULT_MODEL, get_client
-from tests.test_safety import SUMMARY_FILE, check_confirmed, check_rejected
+from tests.test_safety import SUMMARY_FILE, check_confirmed, check_rejected, is_official_aws_url
 
 RESULTS_FILE = ROOT / "results.md"
+BLOCKED_FILE = ROOT / "summary.blocked.json"
 
 PAGES = json.loads(SNAPSHOT_FILE.read_text(encoding="utf-8"))
 PAGES_BY_ID = {p["page_id"]: p for p in PAGES}
@@ -111,7 +113,7 @@ def fact_checker(state: ClaimState) -> ClaimState:
     """Answers the three checks. Checks 1 and 2 are exact tests; check 3 asks the model."""
     page = PAGES_BY_ID.get(state.get("page_id") or "")
     quote = state.get("quote") or ""
-    check1 = bool(page and page["url"].startswith("https://aws.amazon.com/"))
+    check1 = bool(page and is_official_aws_url(page["url"]))
     if not check1:
         return {"checks": [False, False, False],
                 "reason": "no source page on aws.amazon.com in the snapshot matches this claim."}
@@ -224,13 +226,14 @@ def lead_summary(results: list) -> dict:
     return {"confirmed": confirmed, "rejected": rejected}
 
 
-def safety_checks(summary: dict) -> None:
-    """Runs tests/test_safety.py's checks on both lists. Stops the pipeline if either fails."""
+def safety_checks(summary: dict) -> Optional[str]:
+    """Runs tests/test_safety.py's checks on both lists. Returns why they failed, or None if both pass."""
     try:
         check_confirmed(summary["confirmed"])
         check_rejected(summary["rejected"])
     except AssertionError as error:
-        sys.exit(f"Safety check failed, so no briefing was built: {error}")
+        return str(error)
+    return None
 
 
 def print_summary(summary: dict) -> None:
@@ -253,13 +256,15 @@ def cell(text: str) -> str:
     return (text or "").replace("|", "\\|").replace("\n", " ")
 
 
-def write_results(results: list) -> None:
+def write_results(results: list, run_at: str) -> None:
     """results.md: one row per candidate, with a link to its LangSmith trace."""
     lines = [
         "# Results",
         "",
         f"Each claim was checked by `pipeline.py` (Lead, Researcher, Fact-checker) against "
         f"`data/aws_official_source_snapshot.json` using `{DEFAULT_MODEL}`, following `confirm_rule.md`.",
+        "",
+        f"Run: {run_at}. `summary.json` comes from the same run. Both are written only after the safety checks pass.",
         "",
         "| Candidate | Claim | Verdict | Source URL and quote | Reason | Trace |",
         "|---|---|---|---|---|---|",
@@ -310,12 +315,34 @@ def main(wanted: set) -> dict:
         print(f"  Verdict: {result['verdict']}\n")
     wait_for_all_tracers()
     add_trace_links(results)
-    if not wanted:
-        write_results(results)
-        print(f"Wrote {RESULTS_FILE.name}\n")
-    summary = lead_summary(results)
-    SUMMARY_FILE.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
-    safety_checks(summary)
+    return finish(results, full_run=not wanted)
+
+
+def finish(results: list, full_run: bool) -> dict:
+    """Builds both lists and runs the safety checks before anything is written or printed.
+
+    Passing full run: writes summary.json and results.md from this one run, then the briefing.
+    Passing partial run (some candidate ids only): writes no files, so both stay from one full run.
+    Failing run: writes neither file, saves the lists to summary.blocked.json and exits with an error.
+    """
+    run_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    summary = {"run_at": run_at, "model": DEFAULT_MODEL, **lead_summary(results)}
+
+    failure = safety_checks(summary)
+    if failure:
+        BLOCKED_FILE.write_text(json.dumps({**summary, "safety_check_failed": failure}, indent=2) + "\n",
+                                encoding="utf-8")
+        sys.exit(f"Safety check failed: {failure}\n"
+                 f"Nothing was written to {RESULTS_FILE.name} or {SUMMARY_FILE.name} and no briefing was built. "
+                 f"The blocked lists are in {BLOCKED_FILE.name}.")
+
+    if full_run:
+        SUMMARY_FILE.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+        write_results(results, run_at)
+        BLOCKED_FILE.unlink(missing_ok=True)
+        print(f"Safety checks passed. Wrote {SUMMARY_FILE.name} and {RESULTS_FILE.name} (run {run_at}).\n")
+    else:
+        print("Safety checks passed. Partial run, so no files were written.\n")
     print_summary(summary)
     return summary
 
