@@ -100,7 +100,13 @@ def build_holdout(publish: bool) -> None:
                      "claimed_service": row.get("claimed_service") or "",
                      "claim_type": row.get("claim_type") or "holdout"})
     log(f"Holdout file: {HOLDOUT_FILE.relative_to(ROOT)} ({len(rows)} claims: {', '.join(r['candidate_id'] for r in rows)})")
-    log(f"Snapshot: {pipeline.SNAPSHOT_FILE.relative_to(ROOT)} ({len(pipeline.PAGES)} pages)")
+    refreshed = sum(p["snapshot_file"] == str(pipeline.REFRESH_FILE.relative_to(ROOT)) for p in pipeline.PAGES)
+    if pipeline.REFRESH_FILE.exists():
+        log(f"Pages for the researcher: {len(pipeline.PAGES)} ({refreshed} from {pipeline.REFRESH_FILE.relative_to(ROOT)}, "
+            f"the rest from {pipeline.SNAPSHOT_FILE.relative_to(ROOT)})")
+    else:
+        log(f"Pages for the researcher: {len(pipeline.PAGES)} from {pipeline.SNAPSHOT_FILE.relative_to(ROOT)}. "
+            f"No refresh file ({pipeline.REFRESH_FILE.relative_to(ROOT)}), so launches after that capture can't be confirmed.")
     results = []
     for row in rows:
         log(f"Checking {row['candidate_id']}: {row['claim_text']}")
@@ -159,8 +165,9 @@ def write_spotcheck(items: list, run_at: str) -> None:
     lines = [
         "# Spot check: confirmed holdout claims",
         "",
-        f"Holdout run of {run_at}. Each confirmed claim below was re-checked by code against "
-        f"`{pipeline.SNAPSHOT_FILE.relative_to(ROOT)}`. Open each source and tick the boxes to confirm it by hand.",
+        f"Holdout run of {run_at}. Each confirmed claim below was re-checked by code against the `body_text` of its "
+        "page in the file named under it (the refresh snapshot when the page is in it). "
+        "Open each source and tick or fail each box by hand.",
         "",
     ]
     if not confirmed:
@@ -177,6 +184,8 @@ def write_spotcheck(items: list, run_at: str) -> None:
             "",
             f"**Source:** [{i['source_title']}]({i['source_url']}) (published {i['published']})",
             "",
+            f"**Checked against:** `{page['snapshot_file'] if page else 'page not found'}`, page `{i['page_id']}`",
+            "",
             "**Quote:**",
             "",
             *[f"> {line}" for line in (i["quote"] or "").splitlines()],
@@ -184,12 +193,12 @@ def write_spotcheck(items: list, run_at: str) -> None:
             "| Code re-check | Result |",
             "|---|---|",
             f"| Source host is exactly aws.amazon.com (https) | {'yes' if pipeline.is_official_aws_url(i['source_url']) else '**no**'} |",
-            f"| Every quoted sentence is word for word on the snapshot page | {'yes' if on_page else '**no**'} |",
+            f"| Every quoted sentence is word for word in that page's body_text or title | {'yes' if on_page else '**no**'} |",
             "",
             "Checked by hand:",
             "",
             "- [ ] Opened the source link and it is the page named above",
-            "- [ ] Found the quote on the live page, word for word",
+            "- [ ] Found the quote in the page's body_text, word for word",
             "- [ ] The quote backs every fact in the claim",
             "",
             f"[Trace]({i['trace_link']})" if i.get("trace_link") else "",

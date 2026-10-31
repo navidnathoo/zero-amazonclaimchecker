@@ -2,11 +2,24 @@
 
 Checks whether a claimed AWS launch is real, against a snapshot of 40 official aws.amazon.com pages captured on 3 November 2025.
 
-**Live briefing:** https://navidnathoo.github.io/zero-amazonclaimchecker/
+**Briefing page:** [docs/index.html](docs/index.html), to be served at https://navidnathoo.github.io/zero-amazonclaimchecker/
 
 The briefing lists every holdout claim with a Confirmed or Rejected badge, the quote that backs a confirmed claim or the reason a claim was rejected, and a public LangSmith trace for each one. The page carries its own data, so no server is needed to view it.
 
-> The current holdout file is a copy of the original five claims (C-01 to C-05) the checker was built on, not a true holdout set, and the briefing says so. The real holdout batch (RIV-HO-01 to RIV-HO-05) hasn't been run yet.
+## Status
+
+| Item | State |
+|---|---|
+| RIV-HO holdout batch (RIV-HO-01 to RIV-HO-05) | **Not run.** The batch hasn't been provided. `data/aws_reinvent_candidate_items_holdout.csv` is still a copy of the original five claims (C-01 to C-05), and the briefing labels it as not a true holdout set. |
+| Refresh snapshot (`data/aws_official_source_snapshot_refresh.json`) | **Not provided.** When it is added, the researcher loads it automatically on top of the 3 November snapshot, and `spotcheck.md` re-checks each confirmed quote against its `body_text`. |
+| Spot check by hand | **Not done.** The boxes in `spotcheck.md` are for a reviewer to tick or fail once the RIV-HO run lands. |
+| GitHub Pages | **Off.** The link above returns 404 until Pages is set to deploy `main` from `/docs` in the repository settings. |
+
+When the RIV-HO batch and refresh file are in `data/`, one command reruns everything and rebuilds the page:
+
+```bash
+.venv/bin/python app.py --holdout --publish 2>&1 | tee holdout_run.log
+```
 
 ## How a claim is checked
 

@@ -20,6 +20,8 @@ from tests.test_safety import is_official_aws_url
 ROOT = Path(__file__).parent
 DATA_FILE = ROOT / "data" / "aws_reinvent_candidate_items.csv"
 SNAPSHOT_FILE = ROOT / "data" / "aws_official_source_snapshot.json"
+REFRESH_FILE = ROOT / "data" / "aws_official_source_snapshot_refresh.json"
+PAGE_FIELDS = {"page_id", "url", "title", "service_name", "published_date", "body_text"}
 RULE_FILE = ROOT / "confirm_rule.md"
 QUESTION = "Is this a real AWS launch? Answer yes or no, and name the page that proves it."
 TOP_PAGES = 5
@@ -36,6 +38,29 @@ def load_row(candidate_id: str) -> dict:
             if row["candidate_id"] == candidate_id:
                 return row
     sys.exit(f"No row with candidate_id {candidate_id} in {DATA_FILE}")
+
+
+def load_snapshot() -> list:
+    """The official pages the researcher can use: the snapshot, plus the refresh file if it exists.
+
+    A refresh page replaces the snapshot page with the same url or page_id (it is the newer
+    capture); any other refresh page is added. Each page records which file it came from.
+    """
+    def read(path: Path) -> list:
+        pages = json.loads(path.read_text(encoding="utf-8"))
+        for n, page in enumerate(pages, start=1):
+            missing = PAGE_FIELDS - set(page)
+            if missing:
+                sys.exit(f"{path.name}, page {n}: missing {', '.join(sorted(missing))}")
+            page["snapshot_file"] = str(path.relative_to(ROOT))
+        return pages
+
+    pages = read(SNAPSHOT_FILE)
+    if REFRESH_FILE.exists():
+        for new in read(REFRESH_FILE):
+            pages = [p for p in pages if p["url"] != new["url"] and p["page_id"] != new["page_id"]]
+            pages.append(new)
+    return pages
 
 
 def words(text: str) -> set:
@@ -56,7 +81,7 @@ def candidate_pages(row: dict, pages: list) -> list:
 
 @traceable(name="check_claim")
 def check_claim(row: dict) -> dict:
-    pages = json.loads(SNAPSHOT_FILE.read_text(encoding="utf-8"))
+    pages = load_snapshot()
     by_id = {p["page_id"]: p for p in pages}
     shortlist = candidate_pages(row, pages)
 

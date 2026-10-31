@@ -20,14 +20,14 @@ from langgraph.graph import END, START, StateGraph
 from langsmith import Client
 from langsmith.wrappers import wrap_openai
 
-from check_claim import DATA_FILE, ROOT, RULE_FILE, SNAPSHOT_FILE, candidate_pages, yes_no
+from check_claim import DATA_FILE, REFRESH_FILE, ROOT, RULE_FILE, SNAPSHOT_FILE, candidate_pages, load_snapshot, yes_no
 from openrouter_client import DEFAULT_MODEL, get_client
 from tests.test_safety import SUMMARY_FILE, check_confirmed, check_rejected, is_official_aws_url
 
 RESULTS_FILE = ROOT / "results.md"
 BLOCKED_FILE = ROOT / "summary.blocked.json"
 
-PAGES = json.loads(SNAPSHOT_FILE.read_text(encoding="utf-8"))
+PAGES = load_snapshot()
 PAGES_BY_ID = {p["page_id"]: p for p in PAGES}
 RULE = RULE_FILE.read_text(encoding="utf-8")
 client = wrap_openai(get_client())
