@@ -1,0 +1,56 @@
+{
+  "run_at": "2026-10-31 08:03 UTC",
+  "model": "anthropic/claude-haiku-5.5",
+  "items": [
+    {
+      "candidate_id": "C-01",
+      "claim": "Amazon Bedrock AgentCore is now generally available for building and running AI agents at scale.",
+      "verdict": "confirmed",
+      "source_url": "https://aws.amazon.com/about-aws/whats-new/2025/10/amazon-bedrock-agentcore-available/",
+      "source_title": "Amazon Bedrock AgentCore is now generally available",
+      "quote": "Amazon Bedrock AgentCore is now generally available.\nAgentCore is an agentic platform to build, deploy and operate AI agents securely at scale, using any framework and any foundation model.",
+      "reason": null,
+      "trace_link": "https://smith.langchain.com/o/de7c6350-a5b1-4b46-8f04-28deb2c4683d/projects/p/01a18ca6-4de5-79b6-bb95-dab6c587ffe8/r/95273b9d-b8e9-4714-95d7-03efed6f2b5b?poll=true"
+    },
+    {
+      "candidate_id": "C-02",
+      "claim": "AWS will launch a managed quantum computing Region in us-east-1 at re:Invent 2025.",
+      "verdict": "rejected",
+      "source_url": null,
+      "source_title": null,
+      "quote": null,
+      "reason": "Check 1 failed: no source page on aws.amazon.com in the snapshot matches this claim.",
+      "trace_link": "https://smith.langchain.com/o/de7c6350-a5b1-4b46-8f04-28deb2c4683d/projects/p/01a18ca6-4de5-79b6-bb95-dab6c587ffe8/r/1628447f-f6f1-4594-8d9f-2e745744e51e?poll=true"
+    },
+    {
+      "candidate_id": "C-03",
+      "claim": "Amazon EC2 P6e-GB200 UltraServers accelerated by NVIDIA Grace Blackwell are now available in all commercial AWS Regions.",
+      "verdict": "rejected",
+      "source_url": null,
+      "source_title": null,
+      "quote": null,
+      "reason": "Check 3 failed: 'Available in all commercial AWS Regions' is not backed (The sentences only say the UltraServers are available through EC2 Capacity Blocks for ML in the Dallas Local Zone (us-east-1-dfw-2a), an extension of the US East (N. Virginia) Region. They do not say anything about all commercial AWS Regions).",
+      "trace_link": "https://smith.langchain.com/o/de7c6350-a5b1-4b46-8f04-28deb2c4683d/projects/p/01a18ca6-4de5-79b6-bb95-dab6c587ffe8/r/4716ef33-e47d-41ea-9ef5-cc8a9402242e?poll=true"
+    },
+    {
+      "candidate_id": "C-04",
+      "claim": "Amazon Aurora DSQL is now generally available as a serverless distributed SQL database with active-active high availability.",
+      "verdict": "confirmed",
+      "source_url": "https://aws.amazon.com/about-aws/whats-new/2025/05/amazon-aurora-dsql-generally-available/",
+      "source_title": "Amazon Aurora DSQL is now generally available",
+      "quote": "Amazon Aurora DSQL is now generally available. Aurora DSQL is a serverless, distributed SQL database with virtually unlimited scale, active-active high availability, PostgreSQL compatibility and no infrastructure to manage. Single-Region clusters offer 99.99% availability and multi-Region clusters offer 99.999% availability. Aurora DSQL is available in the following AWS Regions: US East (N. Virginia), US East (Ohio), US West (Oregon), Asia Pacific (Osaka), Asia Pacific (Tokyo), Europe (Ireland), Europe (London) and Europe (Paris).",
+      "reason": null,
+      "trace_link": "https://smith.langchain.com/o/de7c6350-a5b1-4b46-8f04-28deb2c4683d/projects/p/01a18ca6-4de5-79b6-bb95-dab6c587ffe8/r/022ad337-1cfe-400c-a5c1-e6767c394f9d?poll=true"
+    },
+    {
+      "candidate_id": "C-05",
+      "claim": "Amazon S3 Vectors is now GA and lets you store and query vector embeddings natively in S3 at massive scale.",
+      "verdict": "rejected",
+      "source_url": null,
+      "source_title": null,
+      "quote": null,
+      "reason": "Check 3 failed: 'Launch stage is generally available (GA)' is not backed (The sentences say the service is in preview, not GA. The heading reads 'Amazon S3 Vectors (Preview)'); 'Stores and queries vector embeddings (the word 'embeddings' is not used)' is not backed (The sentences say 'vectors', not 'vector embeddings'); 'At massive scale' is not backed (The sentences give a limit of up to 10,000 vector indexes per vector bucket, and do not describe the service as operating at massive scale).",
+      "trace_link": "https://smith.langchain.com/o/de7c6350-a5b1-4b46-8f04-28deb2c4683d/projects/p/01a18ca6-4de5-79b6-bb95-dab6c587ffe8/r/745ec092-0ea2-4347-9906-952db3f723dc?poll=true"
+    }
+  ]
+}

@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS Claim Briefing</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #16181d; --muted: #5d6470; --border: #dfe3e8;
+    --accent: #2457d6; --accent-text: #ffffff;
+    --ok: #146c43; --ok-bg: #e5f4ec; --bad: #b42318; --bad-bg: #fdecea; --quote-bg: #f1f3f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111317; --card: #1a1d23; --text: #e8eaee; --muted: #9aa2ae; --border: #2c313a;
+      --accent: #5b8cff; --accent-text: #0b0d10;
+      --ok: #5fd39a; --ok-bg: #12291e; --bad: #ff8a80; --bad-bg: #331716; --quote-bg: #22262e;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1 { font-size: 28px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  label { display: block; font-weight: 600; margin-bottom: 8px; }
+  textarea {
+    width: 100%; min-height: 96px; resize: vertical; padding: 12px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text); font: inherit;
+  }
+  textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .row { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+  button.run {
+    background: var(--accent); color: var(--accent-text); border: 0; border-radius: 8px;
+    padding: 10px 22px; font: inherit; font-weight: 600; cursor: pointer;
+  }
+  button.run:disabled { opacity: .55; cursor: wait; }
+  .hint { color: var(--muted); font-size: 14px; }
+  .examples { margin-top: 16px; }
+  .examples p { margin: 0 0 6px; font-size: 14px; color: var(--muted); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    border: 1px solid var(--border); background: transparent; color: var(--text); border-radius: 999px;
+    padding: 4px 12px; font: inherit; font-size: 13px; cursor: pointer; text-align: left;
+  }
+  .chip:hover { border-color: var(--accent); }
+  #status { margin-top: 20px; color: var(--muted); }
+  #result { margin-top: 20px; }
+  .verdict { display: inline-block; font-weight: 700; font-size: 20px; padding: 6px 14px; border-radius: 8px; }
+  .verdict.ok { color: var(--ok); background: var(--ok-bg); }
+  .verdict.bad { color: var(--bad); background: var(--bad-bg); }
+  .reason { margin: 12px 0 0; }
+  h2 { font-size: 16px; margin: 24px 0 8px; }
+  .source a { color: var(--accent); word-break: break-word; }
+  .source .meta { color: var(--muted); font-size: 14px; }
+  blockquote {
+    margin: 8px 0 0; padding: 12px 14px; background: var(--quote-bg); border-left: 3px solid var(--border);
+    border-radius: 6px; white-space: pre-line;
+  }
+  ul.facts { list-style: none; margin: 0; padding: 0; }
+  ul.facts li { padding: 10px 0; border-top: 1px solid var(--border); }
+  ul.facts li:first-child { border-top: 0; }
+  .mark { font-weight: 700; margin-right: 6px; }
+  .mark.ok { color: var(--ok); } .mark.bad { color: var(--bad); }
+  .detail { display: block; color: var(--muted); font-size: 14px; margin-top: 2px; }
+  .trace { margin-top: 20px; font-size: 14px; color: var(--muted); }
+  .trace a { color: var(--muted); }
+  .error { color: var(--bad); }
+  .holdout { margin-top: 48px; }
+  .holdout h2 { font-size: 20px; margin: 0 0 4px; }
+  .holdout .sub { margin-bottom: 16px; }
+  ol.claims { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+  ol.claims li { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  .claim-head { display: flex; gap: 10px; align-items: flex-start; }
+  .claim-id { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; padding-top: 3px; }
+  .claim-text { flex: 1; font-weight: 600; }
+  .badge { font-size: 13px; font-weight: 700; padding: 2px 10px; border-radius: 999px; white-space: nowrap; }
+  .badge.ok { color: var(--ok); background: var(--ok-bg); }
+  .badge.bad { color: var(--bad); background: var(--bad-bg); }
+  ol.claims blockquote { margin-top: 10px; }
+  ol.claims .why { margin: 10px 0 0; color: var(--text); font-size: 15px; }
+  ol.claims .links { margin-top: 8px; font-size: 13px; color: var(--muted); }
+  ol.claims .links a { color: var(--muted); word-break: break-word; }
+  .notice { background: var(--card); border: 1px dashed var(--border); border-radius: 12px; padding: 16px; color: var(--muted); }
+  .notice code { color: var(--text); }
+</style>
+</head>
+<body>
+<main>
+  <h1>AWS Claim Checker</h1>
+  <p class="sub">Checks a claim against 40 official aws.amazon.com pages captured on 3 November 2025.</p>
+
+  <form class="card" id="form">
+    <label for="claim">Claim</label>
+    <textarea id="claim" placeholder="e.g. Amazon S3 Vectors is now generally available" maxlength="1000" required></textarea>
+    <div class="row">
+      <button class="run" id="run" type="submit">Run</button>
+      <span class="hint">Takes about 15–30 seconds. ⌘/Ctrl + Enter also runs it.</span>
+    </div>
+    <div class="examples">
+      <p>Try one:</p>
+      <div class="chips" id="chips"></div>
+    </div>
+  </form>
+
+  <div id="status" role="status" aria-live="polite"></div>
+  <div id="result"></div>
+
+  <section class="holdout" aria-labelledby="holdout-title">
+    <h2 id="holdout-title">Holdout claims</h2>
+    <p class="sub" id="holdout-sub">Every claim in the holdout set, checked by the same pipeline and safety checks.</p>
+    <div id="holdout"></div>
+  </section>
+</main>
+
+<script>
+const EXAMPLES = [
+  "Amazon Bedrock AgentCore is now generally available for building and running AI agents at scale.",
+  "Amazon Aurora DSQL is now generally available as a serverless distributed SQL database with active-active high availability.",
+  "Amazon S3 Vectors is now GA and lets you store and query vector embeddings natively in S3 at massive scale.",
+  "Amazon EC2 P6e-GB200 UltraServers accelerated by NVIDIA Grace Blackwell are now available in all commercial AWS Regions.",
+  "AWS will launch a managed quantum computing Region in us-east-1 at re:Invent 2025.",
+];
+
+const WHY = {
+  1: "No official AWS page in the snapshot covers this claim. It may be made up, or announced after 3 November 2025.",
+  2: "The quote couldn't be matched word for word to the official page, so it can't be trusted.",
+  3: "An official AWS page covers this, but it doesn't back every part of the claim.",
+};
+
+const form = document.getElementById("form");
+const claim = document.getElementById("claim");
+const runButton = document.getElementById("run");
+const statusBox = document.getElementById("status");
+const result = document.getElementById("result");
+
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [key, value] of Object.entries(attrs)) {
+    if (key === "class") node.className = value; else node.setAttribute(key, value);
+  }
+  for (const child of children) if (child != null) node.append(child);
+  return node;
+}
+
+const chips = document.getElementById("chips");
+for (const text of EXAMPLES) {
+  const chip = el("button", { class: "chip", type: "button" }, text.length > 60 ? text.slice(0, 57) + "…" : text);
+  chip.title = text;
+  chip.addEventListener("click", () => { claim.value = text; claim.focus(); });
+  chips.append(chip);
+}
+
+claim.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) form.requestSubmit();
+});
+
+function sourceBlock(source, quote) {
+  const link = el("a", { href: source.url, target: "_blank", rel: "noopener" }, source.title);
+  return el("div", { class: "source" },
+    link,
+    el("div", { class: "meta" }, `aws.amazon.com · published ${source.published}`),
+    quote ? el("blockquote", {}, quote) : null,
+  );
+}
+
+function factsBlock(facts) {
+  if (!facts.length) return null;
+  const list = el("ul", { class: "facts" });
+  for (const fact of facts) {
+    const backed = fact.supported;
+    const detail = backed
+      ? `${fact.match === "exact" ? "Backed" : "Backed (same meaning)"}: “${fact.evidence}”`
+      : `Not backed: ${fact.note}`;
+    list.append(el("li", {},
+      el("span", { class: `mark ${backed ? "ok" : "bad"}` }, backed ? "✓" : "✗"),
+      fact.fact,
+      el("span", { class: "detail" }, detail),
+    ));
+  }
+  return list;
+}
+
+function render(data) {
+  const card = el("div", { class: "card" });
+  if (data.verified) {
+    card.append(el("span", { class: "verdict ok" }, "Yes, verified"));
+    card.append(el("h2", {}, "Verified from"));
+    card.append(sourceBlock(data.source, data.quote));
+    const facts = factsBlock(data.facts);
+    if (facts) card.append(el("h2", {}, "Every fact, checked"), facts);
+  } else {
+    card.append(el("span", { class: "verdict bad" }, "Not verified"));
+    card.append(el("p", { class: "reason" }, WHY[data.failed_check] || data.reason));
+    if (data.source) {
+      card.append(el("h2", {}, "What AWS actually says"));
+      card.append(sourceBlock(data.source, data.quote));
+    }
+    const facts = factsBlock(data.facts);
+    if (facts) card.append(el("h2", {}, "Every fact, checked"), facts);
+    if (!data.facts.length) card.append(el("p", { class: "detail" }, data.reason));
+  }
+  if (data.trace_link) {
+    card.append(el("div", { class: "trace" }, el("a", { href: data.trace_link, target: "_blank", rel: "noopener" }, "View the full run in LangSmith")));
+  }
+  result.replaceChildren(card);
+}
+
+function code(text) { return el("code", {}, text); }
+
+function renderHoldout(data) {
+  const box = document.getElementById("holdout");
+  if (data.status === "no_csv") {
+    box.replaceChildren(el("div", { class: "notice" },
+      "No holdout file yet. Add ", code(data.csv), ", then run ",
+      code(".venv/bin/python app.py --holdout"), " and reload this page."));
+    return;
+  }
+  if (data.status === "not_run") {
+    box.replaceChildren(el("div", { class: "notice" },
+      "The holdout claims haven't been checked yet. Run ",
+      code(".venv/bin/python app.py --holdout"), " and reload this page."));
+    return;
+  }
+  const confirmed = data.items.filter((item) => item.verdict === "confirmed").length;
+  document.getElementById("holdout-sub").textContent =
+    `${data.items.length} claims from ${data.csv}, checked ${data.run_at}: ` +
+    `${confirmed} confirmed, ${data.items.length - confirmed} rejected.`;
+  const list = el("ol", { class: "claims" });
+  for (const item of data.items) {
+    const ok = item.verdict === "confirmed";
+    const entry = el("li", {},
+      el("div", { class: "claim-head" },
+        el("span", { class: "claim-id" }, item.candidate_id),
+        el("span", { class: "claim-text" }, item.claim),
+        el("span", { class: `badge ${ok ? "ok" : "bad"}` }, ok ? "Confirmed" : "Rejected"),
+      ),
+      ok ? el("blockquote", {}, item.quote) : el("p", { class: "why" }, item.reason),
+    );
+    const links = el("div", { class: "links" });
+    if (ok && item.source_url) links.append(el("a", { href: item.source_url, target: "_blank", rel: "noopener" }, item.source_title || item.source_url));
+    if (item.trace_link) {
+      if (links.childNodes.length) links.append(" · ");
+      links.append(el("a", { href: item.trace_link, target: "_blank", rel: "noopener" }, "trace"));
+    }
+    if (links.childNodes.length) entry.append(links);
+    list.append(entry);
+  }
+  const parts = [list];
+  const seen = data.seen_before || [];
+  if (seen.length) {
+    const all = seen.length === data.items.length;
+    parts.unshift(el("div", { class: "notice" },
+      all
+        ? `Not a true holdout set: these are the original ${seen.length} claims (${seen.join(", ")}) the checker was built and tuned on, so they don't show how it does on new claims.`
+        : `${seen.length} of these claims (${seen.join(", ")}) are from the original set the checker was built and tuned on, so they don't test it on anything new.`));
+  }
+  if (data.stale) {
+    parts.unshift(el("div", { class: "notice" }, "The holdout file has changed since these results were made. Run ",
+      code(".venv/bin/python app.py --holdout"), " to update them."));
+  }
+  box.replaceChildren(...parts);
+}
+
+fetch("/api/holdout")
+  .then((response) => response.json())
+  .then(renderHoldout)
+  .catch((error) => {
+    document.getElementById("holdout").replaceChildren(el("div", { class: "notice error" }, `Couldn't load the holdout results: ${error.message}`));
+  });
+
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const text = claim.value.trim();
+  if (!text) { claim.focus(); return; }
+  runButton.disabled = true;
+  result.replaceChildren();
+  statusBox.textContent = "Checking… the researcher and fact-checker are reading the official AWS pages.";
+  try {
+    const response = await fetch("/api/check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ claim: text }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || `Request failed (${response.status})`);
+    statusBox.textContent = "";
+    render(data);
+  } catch (error) {
+    statusBox.replaceChildren(el("span", { class: "error" }, error.message));
+  } finally {
+    runButton.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

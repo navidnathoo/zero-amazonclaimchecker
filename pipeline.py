@@ -12,6 +12,7 @@ import re
 import sys
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import List, Optional, TypedDict
 
 from langchain_core.tracers.langchain import wait_for_all_tracers
@@ -170,8 +171,8 @@ builder.add_edge("fact_checker", "lead")
 graph = builder.compile()
 
 
-def load_rows() -> list:
-    with open(DATA_FILE, newline="", encoding="utf-8") as f:
+def load_rows(path: Path = DATA_FILE) -> list:
+    with open(path, newline="", encoding="utf-8") as f:
         return list(csv.DictReader(f))
 
 
