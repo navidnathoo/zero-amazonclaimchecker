@@ -1,7 +1,9 @@
 """Local server for briefing.html: check one claim, and list the holdout claims' results.
 
     .venv/bin/python app.py              # then open http://127.0.0.1:8765
-    .venv/bin/python app.py --holdout    # check every claim in the holdout CSV and save the results
+    .venv/bin/python app.py --holdout              # check every holdout claim; if the safety checks pass,
+                                                   # save results, spotcheck.md and docs/index.html
+    .venv/bin/python app.py --holdout --publish    # the same, and make the traces public for the published page
 
 Claims go through pipeline.py's graph (Lead, Researcher, Fact-checker) and the same safety
 checks. It only listens on this computer, because it uses the API keys in .env.
@@ -25,6 +27,8 @@ ROOT = Path(__file__).parent
 PAGE = ROOT / "briefing.html"
 HOLDOUT_FILE = ROOT / "data" / "aws_reinvent_candidate_items_holdout.csv"
 HOLDOUT_RESULTS = ROOT / "data" / "holdout_results.json"
+SPOTCHECK_FILE = ROOT / "spotcheck.md"
+STATIC_PAGE = ROOT / "docs" / "index.html"
 MAX_CLAIM_LENGTH = 1000
 
 
@@ -75,8 +79,16 @@ def check(claim: str) -> dict:
     }
 
 
-def build_holdout() -> None:
-    """Checks every claim in the holdout CSV. Saves the results only if the safety checks pass."""
+def log(message: str) -> None:
+    print(f"[{datetime.now(timezone.utc).strftime('%H:%M:%S')} UTC] {message}", flush=True)
+
+
+def build_holdout(publish: bool) -> None:
+    """Checks every holdout claim, then runs the safety checks before anything is saved or built.
+
+    Only if both checks pass: makes the traces public (with --publish), saves the results,
+    writes spotcheck.md and builds the published page, docs/index.html.
+    """
     if not HOLDOUT_FILE.exists():
         sys.exit(f"Missing {HOLDOUT_FILE.relative_to(ROOT)}. Add it, then run this again.")
     rows = []
@@ -87,16 +99,30 @@ def build_holdout() -> None:
                      "candidate_id": row.get("candidate_id") or f"H-{n:02d}",
                      "claimed_service": row.get("claimed_service") or "",
                      "claim_type": row.get("claim_type") or "holdout"})
+    log(f"Holdout file: {HOLDOUT_FILE.relative_to(ROOT)} ({len(rows)} claims: {', '.join(r['candidate_id'] for r in rows)})")
+    log(f"Snapshot: {pipeline.SNAPSHOT_FILE.relative_to(ROOT)} ({len(pipeline.PAGES)} pages)")
     results = []
     for row in rows:
-        print(f"Checking {row['candidate_id']}: {row['claim_text']}")
-        results.append(pipeline.run(row))
+        log(f"Checking {row['candidate_id']}: {row['claim_text']}")
+        result = pipeline.run(row)
+        log(f"  {row['candidate_id']} verdict: {result['verdict']}")
+        results.append(result)
     wait_for_all_tracers()
     pipeline.add_trace_links(results)
 
-    failure = pipeline.safety_checks(pipeline.lead_summary(results))
+    summary = pipeline.lead_summary(results)
+    failure = pipeline.safety_checks(summary)
     if failure:
-        sys.exit(f"Safety check failed: {failure}\nNothing was saved to {HOLDOUT_RESULTS.name}.")
+        log(f"SAFETY CHECKS FAILED: {failure}")
+        sys.exit("Nothing was saved and no page was built.")
+    log(f"SAFETY CHECKS PASSED: {len(summary['confirmed'])} confirmed items have an aws.amazon.com source and a quote; "
+        f"{len(summary['rejected'])} rejected items have a reason.")
+
+    if publish:
+        for r in results:
+            if r.get("trace_link"):
+                r["trace_link"] = pipeline.Client().share_run(str(r["run_id"]))
+        log(f"Made {len(results)} traces public.")
 
     items = []
     for r in results:
@@ -108,14 +134,80 @@ def build_holdout() -> None:
             "verdict": "confirmed" if confirmed else "rejected",
             "source_url": r["url"] if confirmed else None,
             "source_title": page["title"] if confirmed and page else None,
+            "published": page["published_date"] if confirmed and page else None,
             "quote": without_title(r["quote"], page) if confirmed else None,
+            "full_quote": r["quote"] if confirmed else None,
+            "page_id": r.get("page_id") if confirmed else None,
             "reason": None if confirmed else pipeline.full_reason(r),
             "trace_link": r.get("trace_link"),
         })
     run_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     HOLDOUT_RESULTS.write_text(json.dumps({"run_at": run_at, "model": pipeline.DEFAULT_MODEL, "items": items},
                                           indent=2) + "\n", encoding="utf-8")
-    print(f"Safety checks passed. Saved {len(items)} results to {HOLDOUT_RESULTS.relative_to(ROOT)}.")
+    log(f"Saved {len(items)} results to {HOLDOUT_RESULTS.relative_to(ROOT)}.")
+
+    write_spotcheck(items, run_at)
+    log(f"Wrote {SPOTCHECK_FILE.relative_to(ROOT)}.")
+
+    build_static_page()
+    log(f"BUILT PAGE: {STATIC_PAGE.relative_to(ROOT)} (holdout results embedded, no server needed).")
+
+
+def write_spotcheck(items: list, run_at: str) -> None:
+    """spotcheck.md: every confirmed holdout item, re-checked against the snapshot, with boxes for a person."""
+    confirmed = [i for i in items if i["verdict"] == "confirmed"]
+    lines = [
+        "# Spot check: confirmed holdout claims",
+        "",
+        f"Holdout run of {run_at}. Each confirmed claim below was re-checked by code against "
+        f"`{pipeline.SNAPSHOT_FILE.relative_to(ROOT)}`. Open each source and tick the boxes to confirm it by hand.",
+        "",
+    ]
+    if not confirmed:
+        lines += ["No holdout claims were confirmed in this run, so there is nothing to spot check.", ""]
+    for i in confirmed:
+        page = pipeline.PAGES_BY_ID.get(i["page_id"] or "")
+        sentences = [s for line in (i["full_quote"] or "").splitlines()
+                     for s in pipeline.re.split(r"(?<=[.!?])\s+", line.strip()) if s]
+        on_page = bool(page) and all(pipeline.on_page(s, page) for s in sentences)
+        lines += [
+            f"## {i['candidate_id']}",
+            "",
+            f"**Claim:** {i['claim']}",
+            "",
+            f"**Source:** [{i['source_title']}]({i['source_url']}) (published {i['published']})",
+            "",
+            "**Quote:**",
+            "",
+            *[f"> {line}" for line in (i["quote"] or "").splitlines()],
+            "",
+            "| Code re-check | Result |",
+            "|---|---|",
+            f"| Source host is exactly aws.amazon.com (https) | {'yes' if pipeline.is_official_aws_url(i['source_url']) else '**no**'} |",
+            f"| Every quoted sentence is word for word on the snapshot page | {'yes' if on_page else '**no**'} |",
+            "",
+            "Checked by hand:",
+            "",
+            "- [ ] Opened the source link and it is the page named above",
+            "- [ ] Found the quote on the live page, word for word",
+            "- [ ] The quote backs every fact in the claim",
+            "",
+            f"[Trace]({i['trace_link']})" if i.get("trace_link") else "",
+            "",
+        ]
+    SPOTCHECK_FILE.write_text("\n".join(lines), encoding="utf-8")
+
+
+def build_static_page() -> None:
+    """docs/index.html: briefing.html with the holdout results built in, for GitHub Pages."""
+    data = json.dumps(holdout_status()).replace("</", "<\\/")
+    slot = '<script id="briefing-data" type="application/json">null</script>'
+    template = PAGE.read_text(encoding="utf-8")
+    if slot not in template:
+        sys.exit(f"{PAGE.name} has no data slot, so the page could not be built.")
+    STATIC_PAGE.parent.mkdir(exist_ok=True)
+    STATIC_PAGE.write_text(template.replace(slot, slot.replace("null", data)), encoding="utf-8")
+    (STATIC_PAGE.parent / ".nojekyll").touch()  # GitHub Pages: serve the file as is
 
 
 def holdout_status() -> dict:
@@ -183,7 +275,7 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     if "--holdout" in sys.argv[1:]:
-        build_holdout()
+        build_holdout(publish="--publish" in sys.argv[1:])
     else:
         print(f"Claim checker running at http://{HOST}:{PORT}")
         ThreadingHTTPServer((HOST, PORT), Handler).serve_forever()

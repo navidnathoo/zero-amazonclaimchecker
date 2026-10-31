@@ -1,5 +1,5 @@
 {
-  "run_at": "2026-10-31 08:03 UTC",
+  "run_at": "2026-10-31 08:26 UTC",
   "model": "anthropic/claude-haiku-5.5",
   "items": [
     {
@@ -8,9 +8,12 @@
       "verdict": "confirmed",
       "source_url": "https://aws.amazon.com/about-aws/whats-new/2025/10/amazon-bedrock-agentcore-available/",
       "source_title": "Amazon Bedrock AgentCore is now generally available",
-      "quote": "Amazon Bedrock AgentCore is now generally available.\nAgentCore is an agentic platform to build, deploy and operate AI agents securely at scale, using any framework and any foundation model.",
+      "published": "2025-10-13",
+      "quote": "Amazon Bedrock AgentCore is now generally available. AgentCore is an agentic platform to build, deploy and operate AI agents securely at scale, using any framework and any foundation model. AgentCore adds support for VPC, AWS PrivateLink and AWS CloudFormation. Amazon Bedrock AgentCore is available in nine AWS Regions: US East (N. Virginia), US East (Ohio), US West (Oregon), Asia Pacific (Mumbai), Asia Pacific (Singapore), Asia Pacific (Sydney), Asia Pacific (Tokyo), Europe (Frankfurt) and Europe (Ireland).",
+      "full_quote": "Amazon Bedrock AgentCore is now generally available\nAmazon Bedrock AgentCore is now generally available. AgentCore is an agentic platform to build, deploy and operate AI agents securely at scale, using any framework and any foundation model. AgentCore adds support for VPC, AWS PrivateLink and AWS CloudFormation. Amazon Bedrock AgentCore is available in nine AWS Regions: US East (N. Virginia), US East (Ohio), US West (Oregon), Asia Pacific (Mumbai), Asia Pacific (Singapore), Asia Pacific (Sydney), Asia Pacific (Tokyo), Europe (Frankfurt) and Europe (Ireland).",
+      "page_id": "AWS-SRC-019",
       "reason": null,
-      "trace_link": "https://smith.langchain.com/o/de7c6350-a5b1-4b46-8f04-28deb2c4683d/projects/p/01a18ca6-4de5-79b6-bb95-dab6c587ffe8/r/95273b9d-b8e9-4714-95d7-03efed6f2b5b?poll=true"
+      "trace_link": "https://smith.langchain.com/public/feacae3b-0a98-410e-84ea-57e8f8e10843/r"
     },
     {
       "candidate_id": "C-02",
@@ -18,9 +21,12 @@
       "verdict": "rejected",
       "source_url": null,
       "source_title": null,
+      "published": null,
       "quote": null,
+      "full_quote": null,
+      "page_id": null,
       "reason": "Check 1 failed: no source page on aws.amazon.com in the snapshot matches this claim.",
-      "trace_link": "https://smith.langchain.com/o/de7c6350-a5b1-4b46-8f04-28deb2c4683d/projects/p/01a18ca6-4de5-79b6-bb95-dab6c587ffe8/r/1628447f-f6f1-4594-8d9f-2e745744e51e?poll=true"
+      "trace_link": "https://smith.langchain.com/public/fa2e867d-5984-498f-bf9e-1ae36da46ed1/r"
     },
     {
       "candidate_id": "C-03",
@@ -28,9 +34,12 @@
       "verdict": "rejected",
       "source_url": null,
       "source_title": null,
+      "published": null,
       "quote": null,
-      "reason": "Check 3 failed: 'Available in all commercial AWS Regions' is not backed (The sentences only say the UltraServers are available through EC2 Capacity Blocks for ML in the Dallas Local Zone (us-east-1-dfw-2a), an extension of the US East (N. Virginia) Region. They do not say anything about all commercial AWS Regions).",
-      "trace_link": "https://smith.langchain.com/o/de7c6350-a5b1-4b46-8f04-28deb2c4683d/projects/p/01a18ca6-4de5-79b6-bb95-dab6c587ffe8/r/4716ef33-e47d-41ea-9ef5-cc8a9402242e?poll=true"
+      "full_quote": null,
+      "page_id": null,
+      "reason": "Check 3 failed: 'The UltraServers are available in all commercial AWS Regions' is not backed (The sentences only say the UltraServers are available through EC2 Capacity Blocks for ML in the Dallas Local Zone (us-east-1-dfw-2a), an extension of the US East (N. Virginia) Region. They do not say anything about all commercial Regions).",
+      "trace_link": "https://smith.langchain.com/public/fc3bf407-6b91-4ffb-a54c-51bdad6669f5/r"
     },
     {
       "candidate_id": "C-04",
@@ -38,9 +47,12 @@
       "verdict": "confirmed",
       "source_url": "https://aws.amazon.com/about-aws/whats-new/2025/05/amazon-aurora-dsql-generally-available/",
       "source_title": "Amazon Aurora DSQL is now generally available",
-      "quote": "Amazon Aurora DSQL is now generally available. Aurora DSQL is a serverless, distributed SQL database with virtually unlimited scale, active-active high availability, PostgreSQL compatibility and no infrastructure to manage. Single-Region clusters offer 99.99% availability and multi-Region clusters offer 99.999% availability. Aurora DSQL is available in the following AWS Regions: US East (N. Virginia), US East (Ohio), US West (Oregon), Asia Pacific (Osaka), Asia Pacific (Tokyo), Europe (Ireland), Europe (London) and Europe (Paris).",
+      "published": "2025-05-27",
+      "quote": "Amazon Aurora DSQL is now generally available.\nAurora DSQL is a serverless, distributed SQL database with virtually unlimited scale, active-active high availability, PostgreSQL compatibility and no infrastructure to manage.",
+      "full_quote": "Amazon Aurora DSQL is now generally available\nAmazon Aurora DSQL is now generally available.\nAurora DSQL is a serverless, distributed SQL database with virtually unlimited scale, active-active high availability, PostgreSQL compatibility and no infrastructure to manage.",
+      "page_id": "AWS-SRC-016",
       "reason": null,
-      "trace_link": "https://smith.langchain.com/o/de7c6350-a5b1-4b46-8f04-28deb2c4683d/projects/p/01a18ca6-4de5-79b6-bb95-dab6c587ffe8/r/022ad337-1cfe-400c-a5c1-e6767c394f9d?poll=true"
+      "trace_link": "https://smith.langchain.com/public/01bb1282-f61e-4590-9d50-8de4dc765a69/r"
     },
     {
       "candidate_id": "C-05",
@@ -48,9 +60,12 @@
       "verdict": "rejected",
       "source_url": null,
       "source_title": null,
+      "published": null,
       "quote": null,
-      "reason": "Check 3 failed: 'Launch stage is generally available (GA)' is not backed (The sentences say the service is in preview, not GA. The heading reads 'Amazon S3 Vectors (Preview)'); 'Stores and queries vector embeddings (the word 'embeddings' is not used)' is not backed (The sentences say 'vectors', not 'vector embeddings'); 'At massive scale' is not backed (The sentences give a limit of up to 10,000 vector indexes per vector bucket, and do not describe the service as operating at massive scale).",
-      "trace_link": "https://smith.langchain.com/o/de7c6350-a5b1-4b46-8f04-28deb2c4683d/projects/p/01a18ca6-4de5-79b6-bb95-dab6c587ffe8/r/745ec092-0ea2-4347-9906-952db3f723dc?poll=true"
+      "full_quote": null,
+      "page_id": null,
+      "reason": "Check 3 failed: 'The service is now GA (generally available)' is not backed (The sentences say the service is in preview, not GA); 'It works at massive scale' is not backed (The sentences do not mention scale; they mention cost reduction of up to 90%, not scale).",
+      "trace_link": "https://smith.langchain.com/public/9328afe3-6e3c-47bc-af14-ca1c56344b0f/r"
     }
   ]
 }

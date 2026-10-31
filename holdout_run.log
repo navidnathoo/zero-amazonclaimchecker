@@ -1,0 +1,17 @@
+[08:26:12 UTC] Holdout file: data/aws_reinvent_candidate_items_holdout.csv (5 claims: C-01, C-02, C-03, C-04, C-05)
+[08:26:12 UTC] Snapshot: data/aws_official_source_snapshot.json (40 pages)
+[08:26:12 UTC] Checking C-01: Amazon Bedrock AgentCore is now generally available for building and running AI agents at scale.
+[08:26:17 UTC]   C-01 verdict: confirmed
+[08:26:17 UTC] Checking C-02: AWS will launch a managed quantum computing Region in us-east-1 at re:Invent 2025.
+[08:26:18 UTC]   C-02 verdict: rejected. Reason: "Check 1 failed: no source page on aws.amazon.com in the snapshot matches this claim."
+[08:26:18 UTC] Checking C-03: Amazon EC2 P6e-GB200 UltraServers accelerated by NVIDIA Grace Blackwell are now available in all commercial AWS Regions.
+[08:26:25 UTC]   C-03 verdict: rejected. Reason: "Check 3 failed: 'The UltraServers are available in all commercial AWS Regions' is not backed (The sentences only say the UltraServers are available through EC2 Capacity Blocks for ML in the Dallas Local Zone (us-east-1-dfw-2a), an extension of the US East (N. Virginia) Region. They do not say anything about all commercial Regions)."
+[08:26:25 UTC] Checking C-04: Amazon Aurora DSQL is now generally available as a serverless distributed SQL database with active-active high availability.
+[08:26:31 UTC]   C-04 verdict: confirmed
+[08:26:31 UTC] Checking C-05: Amazon S3 Vectors is now GA and lets you store and query vector embeddings natively in S3 at massive scale.
+[08:26:34 UTC]   C-05 verdict: rejected. Reason: "Check 3 failed: 'The service is now GA (generally available)' is not backed (The sentences say the service is in preview, not GA); 'It works at massive scale' is not backed (The sentences do not mention scale; they mention cost reduction of up to 90%, not scale)."
+[08:26:44 UTC] SAFETY CHECKS PASSED: 2 confirmed items have an aws.amazon.com source and a quote; 3 rejected items have a reason.
+[08:26:54 UTC] Made 5 traces public.
+[08:26:54 UTC] Saved 5 results to data/holdout_results.json.
+[08:26:54 UTC] Wrote spotcheck.md.
+[08:26:54 UTC] BUILT PAGE: docs/index.html (holdout results embedded, no server needed).
